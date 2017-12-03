@@ -1,0 +1,9 @@
+BIGNUM a, b, *c;
+ 
+/* 間違ったBIGNUMのコピー */
+a = b;
+*c = b;
+ 
+/* 正しいBIGNUMのコピー */
+BN_copy(&a,&b);    /* bをaにコピー */
+c = BN_dup(&b);    /* cを作成し、bと同じ値で初期化 */

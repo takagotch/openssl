@@ -1,0 +1,94 @@
+1	#include "common.h"
+2	 
+3	#define CERTFILE "server.pem"
+4	SSL_CTX *setup_server_ctx(void)
+5	{
+6	    SSL_CTX *ctx;
+7
+8	    ctx = SSL_CTX_new(SSLv23_method());
+9	    if (SSL_CTX_use_certificate_chain_file(ctx, CERTFILE) != 1)
+10	        int_error("Error loading certificate from file");
+11	    if (SSL_CTX_use_PrivateKey_file(ctx, CERTFILE, SSL_FILETYPE_PEM) != 1)
+12	        int_error("Error loading private key from file");
+13	    return ctx;
+14	}
+15
+16	int do_server_loop(SSL *ssl)
+17	{
+18	    int  err, nread;
+19	    char buf[80];
+20	 
+21	    do
+22	    {
+23	        for (nread = 0;  nread < sizeof(buf);  nread += err)
+24	        {
+25	            err = SSL_read(ssl, buf + nread, sizeof(buf) - nread);
+26	            if (err <= 0)
+27	                break;
+28	        }
+29	        fwrite(buf, 1, nread, stdout);
+30	    }
+31	    while (err > 0);
+32	    return (SSL_get_shutdown(ssl) & SSL_RECEIVED_SHUTDOWN) ? 1 : 0;
+33	}
+34	 
+35	void THREAD_CC server_thread(void *arg)
+36	{
+37	    SSL *ssl = (SSL *)arg;
+38
+39	#ifndef WIN32
+40	    pthread_detach(pthread_self());
+41	#endif
+42	    if (SSL_accept(ssl) <= 0)
+43	        int_error("Error accepting SSL connection");
+44	    fprintf(stderr, "SSL Connection opened\n");
+45	    if (do_server_loop(ssl))
+46	        SSL_shutdown(ssl);
+47	    else
+48	        SSL_clear(ssl);
+49	    fprintf(stderr, "SSL Connection closed\n");
+50	    SSL_free(ssl);
+51
+52	ERR_remove_state(0);
+53
+54	#ifdef WIN32
+55	    _endthread();
+56	#endif
+57	}
+58	 
+59	int main(int argc, char *argv[])
+60	{
+61	    BIO         *acc, *client;
+62	    SSL         *ssl;
+63	    SSL_CTX     *ctx;
+64	    THREAD_TYPE tid;
+65	 
+66	    init_OpenSSL();
+67	    seed_prng();
+68
+69	    ctx = setup_server_ctx();
+70
+71	    acc = BIO_new_accept(PORT);
+72	    if (!acc)
+73	        int_error("Error creating server socket");
+74	 
+75	    if (BIO_do_accept(acc) <= 0)
+76	        int_error("Error binding server socket");
+77	 
+78	    for (;;)
+79	    {
+80	        if (BIO_do_accept(acc) <= 0)
+81	            int_error("Error accepting connection");
+82	 
+83	        client = BIO_pop(acc);
+84	        if (!(ssl = SSL_new(ctx)))
+85	            int_error("Error creating SSL context");
+
+87	        SSL_set_bio(ssl, client, client);
+88	         THREAD_CREATE(tid, server_thread, ssl);
+89	    }
+90	    
+91	    SSL_CTX_free(ctx);
+92	    BIO_free(acc);
+93	    return 0;
+94	}

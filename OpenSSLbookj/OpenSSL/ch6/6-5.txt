@@ -1,0 +1,16 @@
+char *decrypt_example(EVP_CIPHER_CTX *ctx, char *ct, int inl)
+{
+/* NULL終端記号を非NULL終端ASCII記号にしてあるという仮定の元に平文にする
+ * そうでなければ、NULLが無視される可能性がある
+ */
+char *pt = (char *)malloc(inl + EVP_CIPHER_CTX_block_size(ctx) + 1);
+int ol;
+EVP_DecryptUpdate(ctx, pt, &ol, ct, inl);
+if (!ol) /* 復号するブロックがなくなったとき */
+{
+free(pt);
+return NULL;
+}
+pt[ol] = 0;
+return pt;
+}

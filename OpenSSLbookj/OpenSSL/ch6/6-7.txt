@@ -1,0 +1,27 @@
+int counter_encrypt_or_decrypt(EVP_CIPHER_CTX *ctx, char *pt, char *ct, int len,
+unsigned char *counter)
+{
+int i, j, where = 0, num, bl = EVP_CIPHER_CTX_block_size(ctx);
+char encr_ctrs[len + bl]; /* 暗号化されたカウンタ */
+if (EVP_CIPHER_CTX_mode(ctx) != EVP_CIPH_ECB_MODE)
+return -1;
+/* （非整列データを扱うのに）ECBモードかどうか */
+for (i = 0; i <= len / bl; i++)
+{
+/* 現在のカウンタ値を暗号化 */
+EVP_EncryptUpdate(ctx, &encr_ctrs[where], &num, counter, bl);
+where += num;
+/* カウンタをインクリメントする。文字列からなる配列であることに注意 */
+for (j = 0; j < bl / sizeof(char); j++)
+{
+if (++counter[j])
+break;
+}
+}
+/* 鍵ストリームと最初のバッファを XORする
+ * その結果を2番目のバッファに入れる
+ */
+for (i = 0; i < len; i++)
+ct[i] = pt[i] ^ encr_ctrs[i];
+return 1; /* 成功 */
+}

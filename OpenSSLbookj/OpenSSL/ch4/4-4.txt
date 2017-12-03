@@ -1,0 +1,15 @@
+/* 読み取り・書き込み用のBIOを作成 */
+bio = BIO_new(BIO_s_mem());
+ 
+/* 割り当てられたバッファを使用して、読み取り専用のBIOを作成 */
+buffer = malloc(4096);
+bio = BIO_new_mem_buf(buffer, 4096);
+ 
+/* Cの文字列と同じ形式の文字列を使用して、読み取り専用のBIOを作成 */
+bio = BIO_new_mem_buf("This is a read-only buffer.", -1);
+ 
+/* メモリBIOのメモリセグメントへのポインタを取得 */
+BIO_get_mem_ptr(bio, &buffer);
+ 
+/* メモリBIOが破棄されるときに、そのメモリセグメントを破棄しないようにする */
+BIO_set_close(bio, BIO_NOCLOSE);

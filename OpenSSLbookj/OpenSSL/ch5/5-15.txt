@@ -1,0 +1,21 @@
+code = SSL_read(ssl, buf + offset, size - offset);
+switch (SSL_get_error(ssl, code))
+{
+    case SSL_ERROR_NONE:
+        /* オフセット値を更新 */
+        offset += code;
+        break;
+    case SSL_ERROR_ZERO_RETURN:
+        /* SSLコネクションのクローズ */
+        do_cleanup(ssl);
+        break;
+    case SSL_ERROR_WANT_READ:
+        /* アプリケーション固有の方法でSSL_readを再試行 */
+        break;
+    case SSL_ERROR_WANT_WRITE:
+        /* アプリケーション固有の方法でSSL_writeを再試行 */
+        break;
+    default:
+        /* エラー。コネクションをシャットダウン */
+        shutdown_connection(ssl);
+}

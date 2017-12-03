@@ -1,0 +1,6 @@
+# cp certs/01.pem testcert.pem
+# openssl ca -revoke testcert.pem
+Using configuration from /opt/exampleca/openssl.cnf
+Enter PEM pass phrase:
+Revoking Certificate 01.
+Data Base Updated

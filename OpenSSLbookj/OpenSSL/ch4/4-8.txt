@@ -1,0 +1,55 @@
+int write_data(const char *filename, char *out, int len, unsigned char *key)
+{
+    int total, written;
+    BIO *cipher, *b64, *buffer, *file;
+ 
+    /* バッファ化ファイルBIOを書き込み用に作成 */
+    file = BIO_new_file(filename, "w");
+    if (!file)
+        return 0;
+ 
+    /* ファイルへの書き込みのバッファとして、バッファ用のフィルタBIOを作成 */
+    buffer = BIO_new(BIO_f_buffer());
+ 
+    /* Base64符号化用のフィルタBIOを作成 */
+    b64 = BIO_new(BIO_f_base64());
+ 
+    /* 暗号用のフィルタBIOを作成し鍵を設定
+       BIO_set_cipherの最後の引数は、暗号化の場合は1、復号の場合は0 */
+    cipher = BIO_new(BIO_f_cipher());
+    BIO_set_cipher(cipher, EVP_des_ede3_cbc(), key, NULL, 1);
+ 
+    /* BIOチェーンを次の順番に並べる
+       cipher-b64-buffer-file */
+    BIO_push(cipher, b64);
+    BIO_push(b64, buffer);
+    BIO_push(buffer, file);
+ 
+    /* データをファイルに書き込むループ
+       基礎となるファイルが非ブロッキングと見なしてエラーをチェックする */
+    for (total = 0;  total < len;  total += written)
+    {
+        if ((written = BIO_write(cipher, out + total, len - total)) <= 0)
+        {
+            if (BIO_should_retry(cipher))
+            {
+                written = 0;
+                continue;
+            }
+            break;
+        }
+    }
+ 
+    /* すべてのデータがとりあえずファイルに格納されたことを確認 */
+    BIO_flush(cipher);
+ 
+    /* ここで、BIO_free_all(cipher)を呼び出してBIOチェーンを解放する
+       ここではデモとして、最初にb64をチェーンからはずす */
+    BIO_pop(b64);
+ 
+    /* この時点ではb64用フィルタBIOが切り離されている
+       チェーンは、暗号用フィルタBIO-バッファ用フィルタBIO-バッファ化ファイルBIOの順
+       以下により、すべてのメモリが解放される */
+    BIO_free(b64);
+    BIO_free_all(cipher);
+}

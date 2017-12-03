@@ -1,0 +1,88 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <openssl/x509_vfy.h>
+#include <openssl/err.h>
+#include <openssl/pem.h>
+ 
+void handle_error(const char *file, int lineno, const char *msg)
+{
+    fprintf(stderr, "** %s:%i %s\n", file, lineno, msg);
+    ERR_print_errors_fp(stderr);
+    exit(-1);
+}
+#define int_error(msg)  handle_error(__FILE__, __LINE__, msg)
+ 
+/* 例を簡単にするための定義 */
+#define CA_FILE     "CAfile.pem"
+#define CA_DIR      "/etc/ssl"
+#define CRL_FILE    "CRLfile.pem"
+#define CLIENT_CERT "cert.pem"
+ 
+int verify_callback(int ok, X509_STORE_CTX *stor)
+{
+    if(!ok)
+        fprintf(stderr, "Error: %s\n",
+                X509_verify_cert_error_string(stor->error));
+    return ok;
+}
+ 
+int main(int argc, char *argv[])
+{
+    X509           *cert;
+    X509_STORE     *store;
+    X509_LOOKUP    *lookup;
+    X509_STORE_CTX *verify_ctx;
+    FILE           *fp;
+ 
+    OpenSSL_add_all_algorithms();
+    ERR_load_crypto_strings();
+    seed_prng();
+ 
+    /* クライアントの証明書を読み込む */
+    if (!(fp = fopen(CLIENT_CERT, "r")))
+        int_error("Error reading client certificate file");
+    if (!(cert = PEM_read_X509(fp, NULL, NULL, NULL)))
+        int_error("Error reading client certificate in file");
+    fclose(fp);
+ 
+    /* 証明書の格納先を作成し、検証を行うコールバック関数を設定 */
+    if (!(store = X509_STORE_new()))
+        int_error("Error creating X509_STORE_CTX object");
+    X509_STORE_set_verify_cb_func(store, verify_callback);
+ 
+    /* CA証明書とCRLを読み込む */
+    if (X509_STORE_load_locations(store, CA_FILE, CA_DIR) != 1)
+        int_error("Error loading the CA file or directory"); 
+    if (X509_STORE_set_default_paths(store) != 1)
+        int_error("Error loading the system-wide CA certificates");
+    if (!(lookup = X509_STORE_add_lookup(store, X509_LOOKUP_file())))
+        int_error("Error creating X509_LOOKUP object");
+    if (X509_load_crl_file(lookup, CRL_FILE, X509_FILETYPE_PEM) != 1)
+        int_error("Error reading the CRL file");
+ 
+    /* CRLを用いた検証は、以前のバージョンでは利用できない */
+#if (OPENSSL_VERSION_NUMBER > 0x00907000L)
+    /* CRLが利用できることを示すフラグを格納先に設定 */
+    X509_STORE_set_flags(store,X509_V_FLAG_CRL_CHECK |
+                              X509_V_FLAG_CRL_CHECK_ALL);
+#endif
+   
+    /* 検証のコンテキストを生成し、初期化 */
+    if (!(verify_ctx = X509_STORE_CTX_new()))
+        int_error("Error creating X509_STORE_CTX object");
+    /* X509_STORE_CTX_initは、以前のバージョンではエラー状態を返さない */
+#if (OPENSSL_VERSION_NUMBER > 0x00907000L)
+    if (X509_STORE_CTX_init(verify_ctx, store, cert, NULL) != 1)
+        int_error("Error initializing verification context");
+#else
+    X509_STORE_CTX_init(verify_ctx, store, cert, NULL);
+#endif
+ 
+    /* 証明書を検証 */
+    if (X509_verify_cert(verify_ctx) != 1)
+        int_error("Error verifying the certificate");
+    else
+        printf("Certificate verified correctly!\n");
+ 
+    return 0;
+}

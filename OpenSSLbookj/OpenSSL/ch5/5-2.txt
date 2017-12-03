@@ -1,0 +1,18 @@
+1	#include "common.h"
+2	 
+3	void handle_error(const char *file, int lineno, const char *msg)
+4	{
+5	    fprintf(stderr, "** %s:%i %s\n", file, lineno, msg);
+6	    ERR_print_errors_fp(stderr);
+7	    exit(-1);
+8	}
+9	 
+10	void init_OpenSSL(void)
+11	{
+12	    if (!THREAD_setup()  |  |  !SSL_library_init())
+13	    {
+14	        fprintf(stderr, "** OpenSSL initialization failed!\n");
+15	        exit(-1);
+16	    }
+17	    SSL_load_error_strings();
+18	}

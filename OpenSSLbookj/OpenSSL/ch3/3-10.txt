@@ -1,0 +1,28 @@
+# openssl ca -gencrl -out exampleca.crl
+
+Using configuration from /opt/exampleca/openssl.cnf
+Enter PEM pass phrase:
+
+# openssl crl -in exampleca.crl -text -noout
+
+Certificate Revocation List (CRL):
+        Version 1 (0x0)
+        Signature Algorithm: md5WithRSAEncryption
+        Issuer: /CN=Example CA/ST=Virginia/C=US/Email=ca@exampleca.org/O=Root Ce
+rtificate Authority
+        Last Update: Jan 14 05:42:08 2002 GMT
+        Next Update: Jan 21 05:42:08 2002 GMT
+Revoked Certificates:
+    Serial Number: 01
+        Revocation Date: Jan 14 05:16:43 2002 GMT
+    Signature Algorithm: md5WithRSAEncryption
+        32:73:3b:e5:b4:f6:2d:57:58:15:e8:87:05:23:27:c3:5d:e5:
+        10:a0:5d:1d:09:68:27:b8:8c:70:5c:5d:4a:0d:07:ff:63:09:
+        2d:df:61:13:7b:ea:5a:49:74:3b:0a:e9:2b:2d:92:3e:4d:c6:
+        f4:4f:18:fa:c9:9e:f7:bb:92:b5:ed:46:14:a1:c2:25:5d:3f:
+        9d:5a:b4:c9:63:5f:06:fc:04:22:0b:80:aa:fd:77:a5:16:9d:
+        36:47:f7:e9:5b:95:16:ff:bb:e6:db:98:3c:2a:aa:bd:4f:91:
+        eb:20:86:44:09:7f:ef:62:69:ef:db:1e:79:7e:24:70:72:34:
+        cf:1e
+# openssl crl -in exampleca.crl -noout -CAfile cacert.pem
+verify OK

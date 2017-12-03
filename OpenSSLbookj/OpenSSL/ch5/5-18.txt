@@ -1,0 +1,13 @@
+/* ctxは、オプションのパラメータがすべて設定されたSSL_CTXオブジェクト */
+int normal_user = 1;
+int admin_user = 2;
+SSL_CTX_set_session_id_context(ctx, &normal_user, sizeof(int));
+/* ctxの残りの設定を行い、SSLオブジェクトを生成して接続する */
+/* 通常のSSL I/Oとアプリケーションコードはここに入る */
+/* クライアントをアップグレードしたい場合は、以下のコードを含める */
+SSL_set_verify(ssl, SSL_VERIFY_PEER  |  SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+               verify_callback);
+SSL_set_session_id_context(ssl, &admin_user, sizeof(int));
+/* 例5.17のコードがここに入り、新しいセッションが作成される */
+post_connection_check(ssl, host);
+/* すべてエラーなしに処理されたら、クライアントを正しく認証できる */ 

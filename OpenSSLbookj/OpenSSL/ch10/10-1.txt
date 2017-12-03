@@ -1,0 +1,16 @@
+STACK_OF(TYPE) * sk_TYPE_new_null(void);
+void sk_TYPE_free(STACK_OF(TYPE) *st);
+void sk_TYPE_pop_free(STACK_OF(TYPE) *st, void (*free_func)(TYPE *));
+void sk_TYPE_zero(STACK_OF(TYPE) *st);
+STACK_OF(TYPE) * sk_TYPE_dup(STACK_OF(TYPE) *st);
+
+int sk_TYPE_push(STACK_OF(TYPE) *st, TYPE *val);
+TYPE * sk_TYPE_pop(STACK_OF(TYPE) *st);
+int sk_TYPE_unshift(STACK_OF(TYPE) *st, TYPE *val);
+TYPE * sk_TYPE_shift(STACK_OF(TYPE) *st);
+int sk_TYPE_num(STACK_OF(TYPE) *st);
+TYPE * sk_TYPE_value(STACK_OF(TYPE) *st, int i);
+TYPE * sk_TYPE_set(STACK_OF(TYPE) *st, int i, TYPE *val);
+TYPE * sk_TYPE_delete(STACK_OF(TYPE) *st, int i);
+TYPE * sk_TYPE_delete_ptr(STACK_OF(TYPE) *st, TYPE *ptr);
+int sk_TYPE_insert(STACK_OF(TYPE) *st, TYPE *val, int i);

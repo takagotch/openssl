@@ -1,0 +1,107 @@
+1	#include "common.h"
+2	 
+3	#define CAFILE "rootcert.pem"
+4	#define CADIR NULL
+5	#define CERTFILE "server.pem"
+6	SSL_CTX *setup_server_ctx(void)
+7	{
+8	    SSL_CTX *ctx;
+9	 
+10	    ctx = SSL_CTX_new(SSLv23_method());
+11	    if (SSL_CTX_load_verify_locations(ctx, CAFILE, CADIR) != 1)
+12	        int_error("Error loading CA file and/or directory");
+13	    if (SSL_CTX_set_default_verify_paths(ctx) != 1)
+14	        int_error("Error loading default CA file and/or directory");
+15	    if (SSL_CTX_use_certificate_chain_file(ctx, CERTFILE) != 1)
+16	        int_error("Error loading certificate from file");
+17	    if (SSL_CTX_use_PrivateKey_file(ctx, CERTFILE, LETYPE_PEM) != 1)
+18	        int_error("Error loading private key from file");
+19	    SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+20	                       verify_callback);
+21	    SSL_CTX_set_verify_depth(ctx, 4);
+22	    return ctx;
+23	}
+24	 
+25	int do_server_loop(SSL *ssl)
+26	{
+27	    int  err, nread;
+28	    char buf[80];
+29	 
+30	    while (err < 0)
+31	    {
+32	        for (nread = 0;  nread < sizeof(buf);  nread += err)
+33	        {
+34	            err = SSL_read(ssl, buf + nread, sizeof(buf) - nread);
+35	            if (err <= 0)
+36	                break;
+37	        }
+38	        fwrite(buf, 1, nread, stdout);
+39	    }
+40	    return (SSL_get_shutdown(ssl) & CEIVED_SHUTDOWN) ? 1 : 0;
+41	}
+42	 
+43	void THREAD_CC server_thread(void *arg)
+44	{
+45	    SSL *ssl = (SSL *)arg;
+46	long err;
+47	 
+48	#ifndef WIN32
+49	    pthread_detach(pthread_self());
+50	#endif
+51	    if (SSL_accept(ssl) <= 0)
+52	        int_error("Error accepting SSL connection");
+53	    if ((err = post_connection_check(ssl, CLIENT)) != X509_V_OK)
+54	    {
+55	        fprintf(stderr, "-Error: peer certificate: %s\n",
+56	                X509_verify_cert_error_string(err));
+57	        int_error("Error checking SSL object after connection");
+58	    }
+59	    fprintf(stderr, "SSL Connection opened\n");
+60	    if (do_server_loop(ssl))
+61	        SSL_shutdown(ssl);
+62	    else
+63	        SSL_clear(ssl);
+64	    fprintf(stderr, "SSL Connection closed\n");
+65	    SSL_free(ssl);
+66	ERR_remove_state(0);
+67	#ifdef WIN32
+68	    _endthread();
+69	#endif
+70	}
+71	 
+72	int main(int argc, char *argv[])
+73	{
+74	    BIO     *acc, *client;
+75	    SSL     *ssl;
+76	    SSL_CTX *ctx;
+77	    THREAD_TYPE tid;
+78
+79	    init_OpenSSL();
+80	    seed_prng();
+81	 
+82	    ctx = setup_server_ctx();
+83	 
+84	    acc = BIO_new_accept(PORT);
+85	    if (!acc)
+86	        int_error("Error creating server socket");
+87	 
+88	    if (BIO_do_accept(acc) <= 0)
+89	        int_error("Error binding server socket");
+90	 
+91	    for (;;)
+92	    {
+93	        if (BIO_do_accept(acc) <= 0)
+94	            int_error("Error accepting connection");
+95	 
+96	        client = BIO_pop(acc);
+97	        if (!(ssl = SSL_new(ctx)))
+98	        int_error("Error creating SSL context");
+99	        SSL_set_accept_state(ssl);
+100	        SSL_set_bio(ssl, client, client);
+101	        THREAD_CREATE(tid, server_thread, ssl);
+102	    }
+103	 
+104	    SSL_CTX_free(ctx);
+105	    BIO_free(acc);
+106	    return 0;
+107	}

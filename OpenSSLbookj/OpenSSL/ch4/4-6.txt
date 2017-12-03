@@ -1,0 +1,25 @@
+/* すでに存在しているソケットデスクリプタに関連付けてソケットBIOを作成
+   BIOが破棄されてもソケットデスクリプタは閉じられない */
+bio = BIO_new(BIO_s_socket());
+BIO_set_fd(bio, sd, BIO_NOCLOSE);
+ 
+/* すでに存在しているソケットデスクリプタに関連付けてソケットBIOを作成
+   BIOが破棄されたらソケットデスクリプタが閉じる */
+bio = BIO_new_socket(sd, BIO_CLOSE);
+ 
+/* リモートホストとの接続を確立するソケットBIOを作成 */
+bio = BIO_new(BIO_s_connect());
+BIO_set_conn_hostname(bio, "www.ora.com");
+BIO_set_conn_port(bio, "http");
+BIO_do_connect(bio);
+ 
+/* 内向きの接続をリスンするソケットBIOを作成 */
+bio = BIO_new(BIO_s_accept());
+BIO_set_accept_port(bio, "https");
+BIO_do_accept(bio); /* 基礎となるソケットをリスニングモードにする */
+for (;;)
+{
+    BIO_do_accept(bio); /* 新規の接続を待つ */
+    new_bio = BIO_pop(bio);
+    /* new_bioがBIO_s_socket() BIOのように動作するようになる */
+}

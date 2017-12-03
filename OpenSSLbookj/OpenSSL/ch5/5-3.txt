@@ -1,0 +1,40 @@
+1	#include "common.h"
+2	 
+3	void do_client_loop(BIO *conn)
+4	{
+5	    int  err, nwritten;
+6	    char buf[80];
+7	 
+8	    for (;;)
+9	    {
+10	        if (!fgets(buf, sizeof(buf), stdin))
+11	            break;
+12	        for (nwritten = 0;  nwritten < sizeof(buf);  nwritten += err)
+13	        {
+14	            err = BIO_write(conn, buf + nwritten, strlen(buf) - nwritten);
+15	            if (err <= 0)
+16	                return;
+17	        }
+18	    }
+19	}
+20	 
+21	int main(int argc, char *argv[])
+22	{
+23	    BIO  *conn;
+24	 
+25	    init_OpenSSL();
+26	 
+27	    conn = BIO_new_connect(SERVER ":" PORT);
+28	    if (!conn)
+29	        int_error("Error creating connection BIO");
+30	 
+31	    if (BIO_do_connect(conn) <= 0)
+32	        int_error("Error connecting to remote machine");
+33	 
+34	    fprintf(stderr, "Connection opened\n");
+35	    do_client_loop(conn);
+36	    fprintf(stderr, "Connection closed\n");
+37	 
+38	    BIO_free(conn);
+39	    return 0;
+40	}

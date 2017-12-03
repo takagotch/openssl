@@ -1,0 +1,6 @@
+# mkdir /opt/exampleca
+# cd /opt/exampleca
+# mkdir certs private
+# chmod g-rwx,o-rwx private
+# echo '01' > serial
+# touch index.txt

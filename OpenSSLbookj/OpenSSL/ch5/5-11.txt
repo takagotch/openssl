@@ -1,0 +1,26 @@
+1	include "common.h"
+2	 
+3	#define CIPHER_LIST "ALL:!ADH:!LOW:!EXP:!MD5:@STRENGTH"
+4	#define CAFILE "rootcert.pem"
+5	#define CADIR NULL
+6	#define CERTFILE "client.pem"
+7	SSL_CTX *setup_client_ctx(void)
+8	{
+9	    SSL_CTX *ctx;
+10	 
+11	    ctx = SSL_CTX_new(SSLv23_method());
+12	    if (SSL_CTX_load_verify_locations(ctx, CAFILE, CADIR) != 1)
+13	        int_error("Error loading CA file and/or directory");
+14	    if (SSL_CTX_set_default_verify_paths(ctx) != 1)
+15	        int_error("Error loading default CA file and/or directory");
+16	    if (SSL_CTX_use_certificate_chain_file(ctx, CERTFILE) != 1)
+17	        int_error("Error loading certificate from file");
+18	    if (SSL_CTX_use_PrivateKey_file(ctx, CERTFILE, SSL_FILETYPE_PEM) != 1)
+19	        int_error("Error loading private key from file");
+20	    SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, verify_callback);
+21	    SSL_CTX_set_verify_depth(ctx, 4);
+22	    SSL_CTX_set_options(ctx, SSL_OP_ALL | SSL_OP_NO_SSLv2);
+23	    if (SSL_CTX_set_cipher_list(ctx, CIPHER_LIST) != 1)
+24	        int_error("Error setting cipher list (no valid ciphers)");
+25	    return ctx;
+26	}

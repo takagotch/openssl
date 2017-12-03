@@ -1,0 +1,12 @@
+int RAND_load_file(const char *filename, long bytes);
+int RAND_write_file(const char *filename);
+ 
+/* /dev/randomから1024バイトを読み込みPRNGにシードとして渡す */
+RAND_load_file("/dev/random", 1024);
+ 
+/* シードをファイルに書き込む */
+RAND_write_file("prngseed.dat");
+ 
+/* ファイル全体からシードを読み込み、取得したバイト数を書き出す */
+nb = RAND_load_file("prngseed.dat", -1);
+printf("Seeded the PRNG with %d byte(s) of data from prngseed.dat.\n", nb);

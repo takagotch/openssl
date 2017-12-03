@@ -1,0 +1,71 @@
+# openssl ca -in testreq.pem
+Using configuration from /opt/exampleca/openssl.cnf
+Enter PEM pass phrase:
+Check that the request matches the signature
+Signature ok
+The Subjects Distinguished Name is as follows
+countryName           :PRINTABLE:'US'
+stateOrProvinceName   :PRINTABLE:'Virginia'
+localityName          :PRINTABLE:'Manassas'
+organizationName      :PRINTABLE:'Test Request'
+commonName            :PRINTABLE:'www.exampleca.org'
+emailAddress          :IA5STRING:'ca@exampleca.org'
+Certificate is to be certified until Jan 14 04:31:25 2003 GMT (365 days)
+Sign the certificate? [y/n]:y
+ 
+1 out of 1 certificate requests certified, commit? [y/n]y
+Write out database with 1 new entries
+Certificate:
+    Data:
+        Version: 3 (0x2)
+        Serial Number: 1 (0x1)
+        Signature Algorithm: md5WithRSAEncryption
+        Issuer: CN=Example CA, ST=Virginia, C=US/Email=ca@exampleca.org, O=Root 
+Certificate Authority
+        Validity
+            Not Before: Jan 14 04:58:29 2002 GMT
+            Not After : Jan 14 04:58:29 2003 GMT
+        Subject: CN=www.exampleca.org, ST=Virginia, C=US/Email=ca@exampleca.org, O=Test Request
+        Subject Public Key Info:
+            Public Key Algorithm: rsaEncryption
+            RSA Public Key: (1024 bit)
+                Modulus (1024 bit):
+                    00:d8:a5:1b:c6:b6:e4:75:bf:f3:e3:ce:29:1d:ab:
+                    e2:5b:0d:bb:2e:94:de:52:a1:20:51:b1:77:d9:42:
+                    a3:6c:26:1f:c3:3e:58:8f:91:b1:b3:ed:bd:7c:62:
+                    1c:71:05:3b:47:ff:1a:de:98:f3:b4:a6:91:fd:91:
+                    26:db:41:76:85:b5:10:3f:c2:10:04:26:4f:bc:03:
+                    39:ff:b9:42:d0:d3:2a:89:db:91:8e:75:6d:f5:71:
+                    ec:96:e8:d6:03:29:8e:fe:20:3f:5d:d8:cb:14:5e:
+                    e5:64:fc:be:fa:d1:27:42:b6:72:eb:b4:16:16:71:
+                    77:d3:0e:8c:cc:87:16:fc:41
+                Exponent: 65537 (0x10001)
+        X509v3 extensions:
+            X509v3 Basic Constraints: 
+                CA:FALSE
+    Signature Algorithm: md5WithRSAEncryption
+        13:33:75:8e:a4:05:9b:76:de:0b:d0:98:b8:86:2a:95:5a:13:
+        0b:14:c7:48:83:f3:95:0e:3e:bf:76:04:f7:ab:ae:cc:cd:76:
+        ae:32:77:ea:8c:96:60:28:52:4e:89:c5:ed:85:68:47:68:95:
+        74:53:9f:dc:64:95:62:1a:b0:21:09:76:75:14:25:d4:fd:17:
+        de:f9:87:7f:d5:dc:e4:41:1e:ad:f6:7b:2d:bf:a6:8a:cd:65:
+        60:3b:71:74:bc:4d:0d:94:5a:22:c4:35:de:b0:19:46:f3:c1:
+        bb:c5:e0:d4:f7:a2:92:65:ec:40:4c:cc:d4:b7:a3:84:bd:a9:
+        b0:86
+-----BEGIN CERTIFICATE-----
+MIICcjCCAdugAwIBAgIBATANBgkqhkiG9w0BAQQFADB7MRMwEQYDVQQDEwpFeGFt
+cGxlIENBMREwDwYDVQQIEwhWaXJnaW5pYTELMAkGA1UEBhMCVVMxHzAdBgkqhkiG
+9w0BCQEWEGNhQGV4YW1wbGVjYS5vcmcxIzAhBgNVBAoTGlJvb3QgQ2VydGlmaWNh
+dGUgQXV0aG9yaXR5MB4XDTAyMDExNDA0NTgyOVoXDTAzMDExNDA0NTgyOVowdDEa
+MBgGA1UEAxMRd3d3LmV4YW1wbGVjYS5vcmcxETAPBgNVBAgTCFZpcmdpbmlhMQsw
+CQYDVQQGEwJVUzEfMB0GCSqGSIb3DQEJARYQY2FAZXhhbXBsZWNhLm9yZzEVMBMG
+A1UEChMMVGVzdCBSZXF1ZXN0MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDY
+pRvGtuR1v/Pjzikdq+JbDbsulN5SoSBRsXfZQqNsJh/DPliPkbGz7b18YhxxBTtH
+/xremPO0ppH9kSbbQXaFtRA/whAEJk+8Azn/uULQ0yqJ25GOdW31ceyW6NYDKY7+
+ID9d2MsUXuVk/L760SdCtnLrtBYWcXfTDozMhxb8QQIDAQABow0wCzAJBgNVHRME
+AjAAMA0GCSqGSIb3DQEBBAUAA4GBABMzdY6kBZt23gvQmLiGKpVaEwsUx0iD85UO
+Pr92BPerrszNdq4yd+qMlmAoUk6Jxe2FaEdolXRTn9xklWIasCEJdnUUJdT9F975
+h3/V3ORBHq32ey2/porNZWA7cXS8TQ2UWiLENd6wGUbzwbvF4NT3opJl7EBMzNS3
+o4S9qbCG
+-----END CERTIFICATE-----
+Data Base Updated

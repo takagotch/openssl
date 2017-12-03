@@ -1,0 +1,8 @@
+/* BIGNUM‚©‚çƒoƒCƒiƒŠ‚Ö‚Ì•ÏŠ· */
+len = BN_num_bytes(num);
+buf = (unsigned char *)malloc(len);
+len = BN_bn2bin(num, buf);
+ 
+/* binary‚©‚çBIGNUM‚Ö‚Ì•ÏŠ· */
+BN_bin2bn(buf, len, num);
+num = BN_bin2bn(buf, len, NULL);

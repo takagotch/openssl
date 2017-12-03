@@ -1,0 +1,75 @@
+#include <stdio.h>
+#include <string.h>
+#include <openssl/evp.h>
+#include <openssl/hmac.h>
+
+#define MAC_KEY_LEN 16
+
+static char bf_key[EVP_MAX_KEY_LENGTH];
+static char iv[EVP_MAX_BLOCK_LENGTH] = {0,}; /* OpenSSL 0.9.6c以前のバージョン
+                                              * では、EVP_MAX_BLOCK_LENGTH
+                                              * を64に#define
+                                              */
+static char mac_key[MAC_KEY_LEN];
+
+/* Base64符号化用のヘルパー関数 */
+unsigned char *base64_encode(unsigned char *buf, unsigned int len)
+{
+    unsigned char *ret;
+    unsigned int  b64_len;
+
+    /* 元データとBase64データの比は、3:4
+     * 整数を3で割り、4をかけた値をNULLで終端
+     */
+    b64_len = (((len + 2) / 3) * 4) + 1;
+    ret = (unsigned char *)malloc(b64_len);
+    EVP_EncodeBlock(ret, buf, len);
+    ret[b64_len - 1] = 0;
+    return ret;
+}
+
+void init_keys(void)
+{
+    RAND_pseudo_bytes(bf_key, EVP_MAX_KEY_LENGTH);
+    RAND_pseudo_bytes(mac_key, MAC_KEY_LEN);
+}
+
+static unsigned char *encrypt_input(unsigned char *inp, int *len)
+{
+    EVP_CIPHER_CTX ctx;
+    unsigned char  *res = (unsigned char *)malloc(strlen(inp) + 
+                                                  EVP_MAX_BLOCK_LENGTH);
+    unsigned int   tlen;
+
+    EVP_EncryptInit(&ctx, EVP_bf_cbc(), bf_key, iv);
+    EVP_EncryptUpdate(&ctx, res, &tlen, inp, strlen(inp));
+    *len = tlen;
+    EVP_EncryptFinal(&ctx, &res[tlen], &tlen);
+    *len += tlen;
+    return res;
+}
+
+static char *fmt = "Set-Cookie: encrypted-history=%s;path=/\r\n"
+                   "Set-Cookie: history-mac=%s;path=/\r\n";
+
+char *create_cookies(char *hist)
+{
+    unsigned int  ctlen;  /* 暗号文のバイナリでの長さ */
+    unsigned int  maclen; /* HMAC出力のバイナリでの長さ */
+    unsigned char rawmac[EVP_MAX_MD_SIZE];
+    unsigned char *buf, *ct, b64_hist, *b64_mac;
+
+    /* あらゆる面で十分な余地がある. */
+    buf = (unsigned char *)malloc(strlen(fmt) + (strlen(hist) * 4) / 3 + 1 +
+                                  (EVP_MAX_MD_SIZE * 4) / 3 + 1);
+    ct = encrypt_input(hist, &ctlen);
+    HMAC(EVP_sha1(), mac_key, MAC_KEY_LEN, hist, strlen(hist), rawmac, &maclen);
+
+    b64_hist = base64_encode(ct, ctlen);
+    b64_mac  = base64_encode(rawmac, maclen);
+    sprintf(buf, fmt, b64_hist, b64_mac);
+
+    free(b64_mac);
+    free(b64_hist);
+    return buf;
+}

@@ -1,0 +1,64 @@
+1	#include "common.h"
+2	 
+3	void do_server_loop(BIO *conn)
+4	{
+5	    int err, nread;
+6	    char buf[80];
+7	 
+8	    do
+9	    {
+10	        for (nread = 0;  nread < sizeof(buf);  nread += err)
+11	        {
+12	             err = BIO_read(conn, buf + nread, sizeof(buf) - nread);
+13	             if (err <= 0)
+14	                 break;
+15	        }
+16	        fwrite(buf, 1, nread, stdout);
+17	    }
+18	    while (err > 0);
+19	}
+20	 
+21	void THREAD_CC server_thread(void *arg)
+22	{
+23	    BIO *client = (BIO *)arg;
+24	 
+25	#ifndef WIN32
+26	    pthread_detach(pthread_self());
+27	#endif
+28	    fprintf(stderr, "Connection opened.\n");
+29	    do_server_loop(client);
+30	    fprintf(stderr, "Connection closed.\n");
+31
+32	    BIO_free(client);
+33	    ERR_remove_state(0);
+34	#ifdef WIN32
+35	    _endthread();
+36	#endif
+37	}
+38	 
+39	int main(int argc, char *argv[])
+40	{
+41	    BIO         *acc, *client;
+42	    THREAD_TYPE tid;
+43	 
+44	    init_OpenSSL();
+45	 
+46	    acc = BIO_new_accept(PORT);
+47	    if (!acc)
+48	        int_error("Error creating server socket");
+49	  
+50	    if (BIO_do_accept(acc) <= 0)
+51	        int_error("Error binding server socket");
+52	  
+53	    for (;;)
+54	    {
+55	        if (BIO_do_accept(acc) <= 0)
+56	            int_error("Error accepting connection");
+57	 
+58	        client = BIO_pop(acc);
+59	        THREAD_CREATE(tid, server_thread, client);
+60	    }
+61	 
+62	    BIO_free(acc);
+63	    return 0;
+64	}

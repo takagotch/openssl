@@ -1,0 +1,35 @@
+#include <openssl/evp.h>
+
+/* 実際に書き込まれたバイト数を返す */
+int incremental_encrypt(EVP_CIPHER_CTX *ctx, char *data, int inl)
+{
+    char *buf;
+    int  ol;
+    int  bl = EVP_CIPHER_CTX_block_size(ctx);
+
+    /* ブロック長 - 1まで、文字列をバッファする
+     * その長さを入力の長さに加え、ブロック数で割れば、
+     * 出力されるブロックの最大数を決定できる
+     */
+    buf = (char *)malloc((inl + bl - 1) / bl * bl);
+    EVP_EncryptUpdate(ctx, buf, &ol, data, inl);
+    if (ol)
+        incremental_send(buf, ol);
+    /* incremental_sendを保存する場合はコピーしておくこと */
+    free(buf);
+    return ol;
+}
+
+/* 書き込まれたバイト数を返す */
+int incremental_finish(EVP_CIPHER_CTX *ctx)
+{
+    char *buf;
+    int  ol;
+  
+    buf = (char *)malloc(EVP_CIPHER_CTX_block_size(ctx));
+    EVP_EncryptFinal(ctx, buf, &ol);
+    if (ol)
+        incremental_send(buf, ol);
+    free(buf);
+    return ol;
+}

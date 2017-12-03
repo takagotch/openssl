@@ -1,0 +1,30 @@
+#include <openssl/evp.h>
+
+void select_random_key(char *key, int b)
+{
+    int i;
+
+    RAND_bytes(key, b);
+    for (i = 0;  i < b - 1;  i++)
+        printf("%02X:", key[i]);
+    printf("%02X\n", key[b - 1]);
+}
+
+void select_random_iv(char *iv, int b)
+{
+    RAND_pseudo_bytes(iv, b);
+}
+
+int setup_for_encryption(void)
+{
+    EVP_CIPHER_CTX ctx;
+    char           key[EVP_MAX_KEY_LENGTH]; 
+    char           iv[EVP_MAX_IV_LENGTH];
+
+    if (!seed_prng())
+        return 0;
+    select_random_key(key, EVP_MAX_KEY_LENGTH);
+    select_random_iv(iv, EVP_MAX_IV_LENGTH);
+    EVP_EncryptInit(&ctx, EVP_bf_cbc(), key, iv);
+    return 1;
+}

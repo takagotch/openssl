@@ -1,0 +1,5 @@
+$ ./config
+$ make
+$ make test # 必要に応じて実行
+$ su  # "make install"を実行するためにroot権限が必要
+# make install

@@ -1,0 +1,11 @@
+BIGNUM static_bn, *dynamic_bn;
+ 
+/* BIGNUM‚ğÃ“I‚ÉŠ„‚è“–‚Ä‚Ä‰Šú‰» */
+BN_init(&static_bn);
+ 
+/* V‹K‚ÌBIGNUM‚ğŠ„‚è“–‚Ä‚Ä‰Šú‰» */
+dynamic_bn = BN_new();
+ 
+/* ¶¬‚µ‚½2‚Â‚ÌBIGNUM‚ğ”jŠü */
+BN_free(dynamic_bn);
+BN_free(&static_bn);

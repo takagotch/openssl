@@ -1,0 +1,14 @@
+ssl = SSL_new(ctx)
+... sslの基盤となる通信の層を設定する...
+... host:portに接続する...
+if (キャッシュにhost:portに対応するセッションが保存されている)
+  SSL_set_session(ssl, 保存されたセッション)
+  SSL_SESSION_free(保存されたセッション)
+SSL_connect(ssl)
+post_connection_check(ssl, host)を呼び出して戻り値を確認する
+... 通常のアプリケーションコード...
+保存するセッション = SSL_get1_session(ssl)
+if (保存するセッション != NULL)
+  保存セッションをhost:port用としてキャッシュに保存する
+SSL_shutdown(ssl)
+SSL_free(ssl)

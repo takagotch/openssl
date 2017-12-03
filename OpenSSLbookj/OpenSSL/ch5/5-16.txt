@@ -1,0 +1,228 @@
+1	#include <openssl/ssl.h>
+2	#include <openssl/err.h>
+3	#include <string.h>
+4	 
+5	#define BUF_SIZE 80
+6	 
+7	void data_transfer(SSL *A, SSL *B)
+8	{
+9	    /* バッファとその長さを表すパラメータ */
+10	    unsigned char A2B[BUF_SIZE];
+11	    unsigned char B2A[BUF_SIZE];
+12	    unsigned int A2B_len = 0;
+13	    unsigned int B2A_len = 0;
+14	    /* 書き込みデータがあることを示すフラグ */
+15	    unsigned int have_data_A2B = 0;
+16	    unsigned int have_data_B2A = 0;
+17	    /* I/Oの状態をポーリングし、check_availability( )関数により設定されるフラグ */
+18	    unsigned int can_read_A = 0;
+19	    unsigned int can_read_B = 0;
+20	    unsigned int can_write_A = 0;
+21	    unsigned int can_write_B = 0;
+22	    /* ブロッキングする理由の組み合わせを示すフラグ */
+23	    unsigned int read_waiton_write_A = 0;
+24	    unsigned int read_waiton_write_B = 0;
+25	    unsigned int read_waiton_read_A = 0;
+26	    unsigned int read_waiton_read_B = 0;
+27	    unsigned int write_waiton_write_A = 0;
+28	    unsigned int write_waiton_write_B = 0;
+29	    unsigned int write_waiton_read_A = 0;
+30	    unsigned int write_waiton_read_B = 0;
+31	    /* I/O動作の戻り値を保存するパラメータ */
+32	    int code;
+33	 
+34	    /* 個々の非ブロッキングSSLオブジェクトの背後で下位のI/O層を作成 */
+35	    set_nonblocking(A);
+36	    set_nonblocking(B);
+37	    SSL_set_mode(A, SSL_MODE_ENABLE_PARTIAL_WRITE | 
+38	                    SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER); 
+39	    SSL_set_mode(B, SSL_MODE_ENABLE_PARTIAL_WRITE |  
+40	                    SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
+41	 
+42	    for (;;)
+43	    {
+44	        /* I/Oが利用可能かを調べてフラグを立てる */
+45	        check_availability(A, &can_read_A, &can_write_A,
+46	                           B, &can_read_B, &can_write_B);
+47	 
+48	        /* 次のif文でAのデータを読み込む。以下のすべての条件が真の場合に
+49	         * 処理を実行する
+50	         * 1. Aに書き込みをしている途中ではない
+51	         * 2. AからBへのバッファに余地がある
+52	         * 3. 読み込みできるようにブロッキングしているかどうかにかかわら
+53	         *    ず、直前の読み込みを完了するために書き込みをする必要があっ
+54	         *    てAが書き込み可能か、あるいは、Aが読み込み可能
+55	         */
+56	        if (!(write_waiton_read_A  |  |  write_waiton_write_A) &&
+57	            (A2B_len != BUF_SIZE) &&
+58	            (can_read_A  |  |  (can_write_A && read_waiton_write_A)))
+59	        {
+60	            /* I/O呼び出しの戻り値から設定するのでフラグを
+61	             * クリアする
+62	             */
+63	            read_waiton_read_A = 0;
+64	            read_waiton_write_A = 0;
+65	 
+66	            /* 現在の位置以降のバッファに読み込み */
+67	            code = SSL_read(A, A2B + A2B_len, BUF_SIZE - A2B_len);
+68	            switch (SSL_get_error(A, code))
+69	            {
+70	                case SSL_ERROR_NONE:
+71	                    /* エラーが起きなければ、長さを更新し、
+72	                     * 「データあり」のフラグを確認する
+73	                     */
+74	                    A2B_len += code;
+75	                    have_data_A2B = 1;
+76	                    break;
+77	                case SSL_ERROR_ZERO_RETURN:
+78	                    /* コネクションをクローズ */
+79	                    goto end;
+80	                case SSL_ERROR_WANT_READ:
+81	                    /* Aが読み込み可能になったら、読み込みを
+82	                     * 再試行
+83	                     */
+84	                    read_waiton_read_A = 1;
+85	                    break;
+86	                case SSL_ERROR_WANT_WRITE:
+87	                    /* Aが書き込み可能になったら、読み込みを
+88	                     * 再試行
+89	                     */
+90	                    read_waiton_write_A = 1;
+91	                    break;
+92	                default:
+93	                    /* エラー */
+94	                    goto err;
+95	            }
+96	        }
+97	 
+98	        /* 次のif文は、AとBが逆になるだけで、
+99	         * 前のif文とだいたい同じ
+100	         */
+101	        if (!(write_waiton_read_B  |  |  write_waiton_write_B) &&
+102	            (B2A_len != BUF_SIZE) &&
+103	            (can_read_B  |  |  (can_write_B && read_waiton_write_B)))
+104	        {
+105	            read_waiton_read_B = 0;
+106	            read_waiton_write_B = 0;
+107	 
+108	            code = SSL_read(B, B2A + B2A_len, BUF_SIZE - B2A_len);
+109	            switch (SSL_get_error(B, code))
+110	            {
+111	                case SSL_ERROR_NONE:
+112	                    B2A_len += code;
+113	                    have_data_B2A = 1;
+114	                    break;
+115	                case SSL_ERROR_ZERO_RETURN:
+116	                    goto end;
+117	                case SSL_ERROR_WANT_READ:
+118	                    read_waiton_read_B = 1;
+119	                    break;
+120	                case SSL_ERROR_WANT_WRITE:
+121	                    read_waiton_write_B = 1;
+122	                    break;
+123	                default:
+124	                    goto err;
+125	            }
+126	        }
+127	 
+128	        /*次のif文はAにデータを書き込む。
+129	         *以下の条件がすべて真の場合に処理を実行する
+130	         *1. Aから読み込みをしている途中ではない
+131	         *2. AからBへのバッファにデータがある
+132	         *3. 書き込みできるようにブロッキングしているかどうかにかかわら
+133	         *   ず、直前にブロックされた書き込みを完了するために読み込む必
+134	         *   要がありAが今は読み込み可能か、あるいは、Aが書き込み可能
+135	         */
+136	        if (!(read_waiton_write_A  |  |  read_waiton_read_A) &&
+137	            have_data_B2A &&
+138	            (can_write_A  |  |  (can_read_A && write_waiton_read_A)))
+139	        {
+140	            /* フラグをクリア */
+141	            write_waiton_read_A = 0;
+142	            write_waiton_write_A = 0;
+143	 
+144	            /* バッファの先頭から書き込みを開始 */
+145	            code = SSL_write(A, B2A, B2A_len);
+146	            switch (SSL_get_error(A, code))
+147	            {
+148	                case SSL_ERROR_NONE:
+149	                    /* エラーが起こらなかったら、BからAへのバッファの長
+150	                     * さを、書き込みしたバイト数だけ短くする。
+151	                     * バッファが空だったら、「データあり」フラグを0に
+152	                     * する。空でなければ、データをバッファの先頭に移動する。
+153	                     * 
+154	                     */
+155	                    B2A_len -= code;
+156	                    if (!B2A_len)
+157	                        have_data_B2A = 0;
+158	                    else
+159	                        memmove(B2A, B2A + code, B2A_len);
+160	                    break;
+161	                case SSL_ERROR_ZERO_RETURN:
+162	                    /* コネクションをクローズ */
+163	                    goto end;
+164	                case SSL_ERROR_WANT_READ:
+165	                    /* Aが読み込み可能になったら書き込みを再試行
+166	                     * する必要がある
+167	                     */
+168	                    write_waiton_read_A = 1;
+169	                    break;
+170	                case SSL_ERROR_WANT_WRITE:
+171	                    /* Aが書き込み可能になったら、書き込みを再試行する
+172	                     * 必要がある
+173	                     */
+174	                    write_waiton_write_A = 1;
+175	                    break;
+176	                default:
+177	                    /* エラー */
+178	                    goto err;
+179	            }
+180	        }
+181	 
+182	        /* 次のif文は、AとBが逆になるだけで、
+183	         * 前のif文とだいたい同じ
+184	         */
+185	        if (!(read_waiton_write_B  |  |  read_waiton_read_B) &&
+186	            have_data_A2B &&
+187	            (can_write_B  |  |  (can_read_B && write_waiton_read_B)))
+188	        {
+189	            write_waiton_read_B = 0;
+190	            write_waiton_write_B = 0;
+191	 
+192	            code = SSL_write(B, A2B, A2B_len);
+193	            switch (SSL_get_error(B, code))
+194	            {
+195	                case SSL_ERROR_NONE:
+196	                    A2B_len -= code;
+197	                    if (!A2B_len)
+198	                        have_data_A2B = 0;
+199	                    else
+200	                        memmove(A2B, A2B + code, A2B_len);
+201	                    break;
+202	                case SSL_ERROR_ZERO_RETURN:
+203	                    /* コネクションをクローズ */
+204	                    goto end;
+205	                case SSL_ERROR_WANT_READ:
+206	                    write_waiton_read_B = 1;
+207	                    break;
+208	                case SSL_ERROR_WANT_WRITE:
+209	                    write_waiton_write_B = 1;
+210	                   break;
+211	                default:
+212	                    /* エラー */
+213	                    goto err;
+214	            }
+215	        }
+216	    }
+217	 
+218	err:
+219	    /* エラーのとき、終了する前にエラー内容を書き出す */
+220	    fprintf(stderr, "Error(s) occured\n");
+221	    ERR_print_errors_fp(stderr);
+222	end:
+223	    /* コネクションをクローズし、ブロッキングモードに戻す */
+224	    set_blocking(A);
+225	    set_blocking(B);
+226	    SSL_shutdown(A);
+227	    SSL_shutdown(B);
+228	}

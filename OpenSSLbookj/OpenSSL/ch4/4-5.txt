@@ -1,0 +1,19 @@
+/* 存在しているFILEオブジェクトを使用してバッファ化ファイルBIOを作成
+   FILEオブジェクトは、BIOが破棄されるときに閉じられる */
+file = fopen("filename.ext", "r+");
+bio = BIO_new(BIO_s_file());
+BIO_set_file(bio, file, BIO_CLOSE);
+ 
+/* 存在しているファイルデスクリプタを使用して非バッファ化ファイルBIOを作成
+   ファイルデスクリプタは、BIOが破棄されるときに閉じられない */
+fd = open("filename.ext", O_RDWR);
+bio = BIO_new(BIO_s_fd());
+BIO_set_fd(bio, fd, BIO_NOCLOSE);
+ 
+/* 新規のFILEオブジェクトをBIO用に作成し、バッファ化ファイルBIOを作成 */
+bio = BIO_new_file("filename.ext", "w");
+ 
+/* 新規にファイルデスクリプタを作成して非バッファ化ファイルBIOを作成
+   ファイルデスクリプタは、BIOが破棄されるときに閉じられる */
+fd = open("filename.ext", O_RDONLY);
+bio = BIO_new_fd(fd, BIO_CLOSE);

@@ -1,0 +1,73 @@
+1	#include "common.h"
+2	 
+3	DH *dh512 = NULL;
+4	DH *dh1024 = NULL;
+5
+6	void init_dhparams(void)
+7	{
+8	    BIO *bio;
+9
+10	    bio = BIO_new_file("dh512.pem", "r");
+11	    if (!bio)
+12	        int_error("Error opening file dh512.pem");
+13	    dh512 = PEM_read_bio_DHparams(bio, NULL, NULL, NULL);
+14	    if (!dh512)
+15	        int_error("Error reading DH parameters from dh512.pem");
+16	    BIO_free(bio);
+17
+18	    bio = BIO_new_file("dh1024.pem", "r");
+19	    if (!bio)
+20	        int_error("Error opening file dh1024.pem");
+21	    dh1024 = PEM_read_bio_DHparams(bio, NULL, NULL, NULL);
+22	    if (!dh1024)
+23	        int_error("Error reading DH parameters from dh1024.pem");
+24	    BIO_free(bio);
+25	}
+26
+27	DH *tmp_dh_callback(SSL *ssl, int is_export, int keylength)
+28	{
+29	    DH *ret;
+30
+31	    if (!dh512  |  |  !dh1024)
+32	        init_dhparams();
+33
+34	    switch (keylength)
+35	    {
+36	        case 512:
+37	            ret = dh512;
+38	            break;
+39	        case 1024:
+40	        default: /* 負荷が高過ぎるので、オンザフライでのDHパラメータの生成はしない */
+41	            ret = dh1024;
+42	            break;
+43	    }
+44	    return ret;
+45	}
+46
+47	#define CIPHER_LIST "ALL:!ADH:!LOW:!EXP:!MD5:@STRENGTH"
+48	#define CAFILE "rootcert.pem"
+49	#define CADIR NULL
+50	#define CERTFILE "server.pem"
+51	SSL_CTX *setup_server_ctx(void)
+52	{
+53	    SSL_CTX *ctx;
+54	 
+55	    ctx = SSL_CTX_new(SSLv23_method());
+56	    if (SSL_CTX_load_verify_locations(ctx, CAFILE, CADIR) != 1)
+57	        int_error("Error loading CA file and/or directory");
+58	    if (SSL_CTX_set_default_verify_paths(ctx) != 1)
+59	        int_error("Error loading default CA file and/or directory");
+60	    if (SSL_CTX_use_certificate_chain_file(ctx, CERTFILE) != 1)
+61	        int_error("Error loading certificate from file");
+62	    if (SSL_CTX_use_PrivateKey_file(ctx, CERTFILE, SSL_FILETYPE_PEM) != 1)
+63	        int_error("Error loading private key from file");
+64	    SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+65	                       verify_callback);
+66	    SSL_CTX_set_verify_depth(ctx, 4);
+67	    SSL_CTX_set_options(ctx, SSL_OP_ALL  |  SSL_OP_NO_SSLv2  | 
+68	                             SSL_OP_SINGLE_DH_USE);
+69	    SSL_CTX_set_tmp_dh_callback(ctx, tmp_dh_callback);
+70	    if (SSL_CTX_set_cipher_list(ctx, CIPHER_LIST) != 1)
+71	        int_error("Error setting cipher list (no valid ciphers)");
+72	    return ctx;
+73	}

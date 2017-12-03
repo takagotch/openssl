@@ -1,0 +1,29 @@
+1	#include <openssl/bio.h>
+2	#include <openssl/err.h>
+3	#include <openssl/rand.h>
+4	#include <openssl/ssl.h>
+5	#include <openssl/x509v3.h>
+6	 
+7	#ifndef WIN32
+8	#include <pthread.h>
+9	#define THREAD_CC
+10	#define THREAD_TYPE                    pthread_t
+11	#define THREAD_CREATE(tid, entry, arg) pthread_create(&(tid), NULL, \
+12	                                                      (entry), (arg))
+13	#else
+14	#include <windows.h>
+15	#define THREAD_CC                      _  _cdecl
+16	#define THREAD_TYPE                    DWORD
+17	#define THREAD_CREATE(tid, entry, arg) do { _beginthread((entry), 0, (arg));\
+18	                                            (tid) = GetCurrentThreadId();   \
+19	                                       } while (0)
+20	#endif
+21	 
+22	#define PORT            "6001"
+23	#define SERVER          "splat.zork.org"
+24	#define CLIENT          "shell.zork.org"
+25	 
+26	#define int_error(msg)  handle_error(__FILE__, __LINE_  _, msg)
+27	void handle_error(const char *file, int lineno, const char *msg);
+28	 
+29	void init_OpenSSL(void);
